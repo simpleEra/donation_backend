@@ -29,6 +29,25 @@ const createItemDonation = async (
     throw new AppError(httpStatus.BAD_REQUEST, "This campaign is closed.");
   }
 
+  if (!payload.itemName || !payload.itemName.trim()) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Please select an item from the Items You Can Donate list"
+    );
+  }
+
+  const fullCampaign = await prisma.campaign.findUnique({
+    where: { id: payload.campaignId },
+    select: { acceptedItems: true },
+  });
+  const acceptedItems = fullCampaign?.acceptedItems ?? [];
+  if (acceptedItems.length > 0 && !acceptedItems.includes(payload.itemName)) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Selected item is not in this campaign's Items You Can Donate list"
+    );
+  }
+
   const uploadedImages: string[] = [];
 
   // upload images
@@ -48,7 +67,7 @@ const createItemDonation = async (
     data: {
       contactName: payload.contactName,
       contactPhone: payload.contactPhone,
-      category: payload.category,
+      itemName: payload.itemName.trim(),
       quantity: Number(payload.quantity),
       condition: payload.condition,
       description: payload.description,
